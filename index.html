@@ -5,23 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>STN_MTRLGC — Estación</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
 <style>
   :root{
-    --bg: #0e1a22;
-    --bg-deep: #0a141b;
-    --panel: #16262f;
-    --panel-line: #24373f;
-    --paper: #ede6d6;
-    --brass: #c7963c;
-    --brass-dim: #8a6b30;
-    --teal: #5fc4b8;
-    --alert: #c0533f;
-    --text: #e8e2d3;
-    --muted: #8a9aa5;
-    --muted-dim: #5c6c74;
+    --bg: #0a1416;
+    --panel: #101c1f;
+    --panel-2: #142225;
+    --panel-line: #1d2e31;
+    --text: #eef2f0;
+    --muted: #7f9295;
+    --muted-dim: #536265;
+    --warm: #e8a33d;   /* máxima */
+    --cool: #5b8dc9;   /* mínima */
+    --live: #4fd1c5;   /* línea en vivo / promedio */
+    --alert: #d1614a;
   }
 
   *{ box-sizing:border-box; }
@@ -30,8 +29,8 @@
   body{
     margin:0;
     background:
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(95,196,184,0.08), transparent 60%),
-      radial-gradient(ellipse 700px 500px at 100% 0%, rgba(199,150,60,0.07), transparent 55%),
+      radial-gradient(ellipse 900px 500px at 10% -10%, rgba(79,209,197,0.07), transparent 60%),
+      radial-gradient(ellipse 800px 550px at 100% 0%, rgba(232,163,61,0.06), transparent 55%),
       var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
@@ -43,13 +42,8 @@
     *{ animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 
-  a{ color:inherit; }
-  ::selection{ background: var(--brass); color: var(--bg-deep); }
-
-  :focus-visible{
-    outline: 2px solid var(--teal);
-    outline-offset: 3px;
-  }
+  ::selection{ background: var(--warm); color: #14100a; }
+  :focus-visible{ outline: 2px solid var(--live); outline-offset: 3px; }
 
   /* ============ TOP BAR ============ */
   .topbar{
@@ -58,20 +52,16 @@
     justify-content:space-between;
     padding: 1.1rem clamp(1.2rem, 4vw, 3rem);
     border-bottom: 1px solid var(--panel-line);
-    background: linear-gradient(180deg, rgba(14,26,34,0.95), rgba(14,26,34,0.75));
-    backdrop-filter: blur(6px);
+    background: linear-gradient(180deg, rgba(10,20,22,0.95), rgba(10,20,22,0.7));
+    backdrop-filter: blur(8px);
     position: sticky;
     top:0;
-    z-index: 20;
+    z-index: 30;
   }
-  .topbar-id{
-    display:flex;
-    align-items:baseline;
-    gap: 0.6rem;
-  }
+  .topbar-id{ display:flex; align-items:baseline; gap: 0.6rem; }
   .topbar-id .marca{
     font-family:'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
+    font-size: 0.7rem;
     letter-spacing: 0.16em;
     color: var(--muted);
     text-transform: uppercase;
@@ -79,195 +69,179 @@
   .topbar-id .estacion{
     font-family:'Fraunces', serif;
     font-weight:600;
-    font-size: 1.25rem;
-    letter-spacing: 0.01em;
+    font-size: 1.2rem;
   }
   .estado-vivo{
-    display:flex;
-    align-items:center;
-    gap:0.85rem;
+    display:flex; align-items:center; gap:0.85rem;
     font-family:'IBM Plex Mono', monospace;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     color: var(--muted);
   }
   .punto-vivo{
     width:8px; height:8px; border-radius:50%;
-    background: var(--teal);
-    box-shadow: 0 0 0 0 rgba(95,196,184,0.6);
+    background: var(--live);
+    box-shadow: 0 0 0 0 rgba(79,209,197,0.6);
     animation: pulso 2.4s ease-out infinite;
   }
   .punto-vivo.offline{ background: var(--alert); animation:none; }
   @keyframes pulso{
-    0%{ box-shadow: 0 0 0 0 rgba(95,196,184,0.5); }
-    70%{ box-shadow: 0 0 0 9px rgba(95,196,184,0); }
-    100%{ box-shadow: 0 0 0 0 rgba(95,196,184,0); }
+    0%{ box-shadow: 0 0 0 0 rgba(79,209,197,0.5); }
+    70%{ box-shadow: 0 0 0 9px rgba(79,209,197,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(79,209,197,0); }
   }
-  .reloj{ color: var(--text); }
 
-  /* ============ HERO ============ */
+  /* ============ HERO: TEMPERATURA ============ */
   .hero{
-    padding: clamp(2rem, 5vw, 3.5rem) clamp(1.2rem, 4vw, 3rem) 1.5rem;
     max-width: 1180px;
     margin: 0 auto;
-  }
-  .hero-eyebrow{
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--brass);
-    margin: 0 0 0.6rem;
-  }
-  .hero-titulo{
-    font-family:'Fraunces', serif;
-    font-weight: 500;
-    font-size: clamp(1.5rem, 3.2vw, 2.15rem);
-    line-height:1.25;
-    max-width: 30ch;
-    margin: 0 0 2.2rem;
-    color: var(--paper);
+    padding: clamp(1.6rem, 4vw, 2.6rem) clamp(1.2rem, 4vw, 3rem) 0;
   }
 
-  .lecturas{
+  .hero-cabecera{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap: 1.4rem;
+    margin-bottom: 1.4rem;
+  }
+
+  .temp-actual-bloque{ display:flex; align-items:baseline; gap: 0.9rem; }
+  .temp-actual-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .temp-actual-valor{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(3rem, 8vw, 4.6rem);
+    line-height: 0.95;
+    color: var(--text);
+  }
+  .temp-actual-valor .grado{ font-size: 0.5em; color: var(--muted); font-weight:400; }
+
+  .selector-rango{
+    display:flex;
+    gap: 0.3rem;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    padding: 0.3rem;
+  }
+  .selector-rango button{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    padding: 0.5rem 1.1rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .selector-rango button:hover{ color: var(--text); }
+  .selector-rango button.activo{
+    background: var(--live);
+    color: #08191a;
+    font-weight: 600;
+  }
+
+  /* Chips Máxima / Mínima */
+  .chips-extremos{
+    display:flex; gap: 0.7rem; flex-wrap:wrap;
+    margin-bottom: 1.1rem;
+  }
+  .chip{
+    display:flex; align-items:center; gap: 0.6rem;
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+  }
+  .chip .punto-chip{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .chip.max .punto-chip{ background: var(--warm); }
+  .chip.min .punto-chip{ background: var(--cool); }
+  .chip .texto-chip{ font-family:'IBM Plex Mono', monospace; }
+  .chip .texto-chip .etiqueta{ font-size: 0.66rem; letter-spacing:0.08em; text-transform:uppercase; color: var(--muted); display:block; }
+  .chip .texto-chip .valor{ font-size: 1rem; color: var(--text); font-weight:600; }
+  .chip .texto-chip .cuando{ font-size: 0.68rem; color: var(--muted-dim); margin-left: 0.4rem; }
+
+  /* Gráfico hero */
+  .panel-hero-grafico{
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 14px;
+    padding: 1.4rem 1.5rem 1rem;
+    position: relative;
+  }
+  #graficoTemperatura{ width:100%; height: 320px; }
+  .grafico-vacio{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    color: var(--muted-dim);
+    font-size: 0.85rem;
+    text-align:center;
+    padding: 2rem;
+  }
+
+  /* ============ SECCIÓN SECUNDARIA (otros sensores) ============ */
+  .secundario{
+    max-width: 1180px;
+    margin: 2.2rem auto 0;
+    padding: 0 clamp(1.2rem, 4vw, 3rem);
+  }
+  .secundario-titulo{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid var(--panel-line);
+  }
+
+  .grid-secundario{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 1px;
     background: var(--panel-line);
     border: 1px solid var(--panel-line);
     border-radius: 10px;
-    overflow: hidden;
+    overflow:hidden;
+    margin-bottom: 1.4rem;
   }
-  .lectura{
+  .lectura-mini{
     background: var(--panel);
-    padding: 1.3rem 1.4rem;
-    position:relative;
+    padding: 1.1rem 1.3rem;
   }
-  .lectura-label{
+  .lectura-mini .label{
     font-family:'IBM Plex Mono', monospace;
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
+    font-size: 0.66rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
-    margin-bottom: 0.55rem;
+    margin-bottom: 0.5rem;
   }
-  .lectura-valor{
+  .lectura-mini .valor{
     font-family:'Fraunces', serif;
     font-weight: 600;
-    font-size: clamp(1.6rem, 3vw, 2.1rem);
-    line-height:1;
+    font-size: 1.5rem;
     color: var(--text);
   }
-  .lectura-valor .unidad{
+  .lectura-mini .valor .unidad{
     font-family:'IBM Plex Mono', monospace;
     font-weight: 400;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     color: var(--muted);
-    margin-left: 0.3rem;
+    margin-left: 0.25rem;
   }
-  .lectura-sub{
-    margin-top:0.5rem;
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--muted-dim);
-  }
-  .lectura.acento::before{
-    content:"";
-    position:absolute; left:0; top:0; bottom:0; width:3px;
-    background: var(--brass);
-  }
-  .lectura.alerta-activa::before{
-    content:"";
-    position:absolute; left:0; top:0; bottom:0; width:3px;
-    background: var(--alert);
-  }
-
-  /* ============ BAROGRAFO (firma visual) ============ */
-  .barografo-wrap{
-    margin-top: 1.6rem;
-    background: var(--panel);
-    border: 1px solid var(--panel-line);
-    border-radius: 10px;
-    padding: 1.1rem 1.4rem 0.9rem;
-  }
-  .barografo-cabecera{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    margin-bottom: 0.4rem;
-  }
-  .barografo-cabecera .titulo{
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-  .barografo-cabecera .rango{
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--muted-dim);
-  }
-  #barografo{ width:100%; height: 90px; display:block; }
-
-  /* ============ SECCIÓN HISTORIAL ============ */
-  .historial{
-    max-width: 1180px;
-    margin: 2.5rem auto 0;
-    padding: 0 clamp(1.2rem, 4vw, 3rem);
-  }
-
-  .historial-cabecera{
-    display:flex;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:space-between;
-    gap: 1rem;
-    margin-bottom: 1.4rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--panel-line);
-  }
-  .historial-titulo{
-    font-family:'Fraunces', serif;
-    font-size: 1.3rem;
-    font-weight: 600;
-    color: var(--paper);
-  }
-
-  .controles-fecha{
-    display:flex;
-    align-items:center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-  }
-  .btn-dia{
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.75rem;
-    letter-spacing:0.04em;
-    background: transparent;
-    border: 1px solid var(--panel-line);
-    color: var(--muted);
-    padding: 0.5rem 0.9rem;
-    border-radius: 6px;
-    cursor:pointer;
-    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
-  }
-  .btn-dia:hover{ border-color: var(--brass-dim); color: var(--text); }
-  .btn-dia.activo{
-    background: var(--brass);
-    border-color: var(--brass);
-    color: var(--bg-deep);
-    font-weight: 600;
-  }
-  input[type="date"]{
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.75rem;
-    background: var(--panel);
-    border: 1px solid var(--panel-line);
-    color: var(--text);
-    padding: 0.48rem 0.7rem;
-    border-radius: 6px;
-    color-scheme: dark;
-  }
+  .lectura-mini.alerta .valor{ color: var(--alert); }
 
   .grid-graficos{
     display:grid;
@@ -280,42 +254,22 @@
     border-radius: 10px;
     padding: 1.2rem 1.3rem 1rem;
   }
-  .panel-grafico-cabecera{
-    display:flex;
-    justify-content:space-between;
-    align-items:baseline;
-    margin-bottom: 0.9rem;
-  }
   .panel-grafico-titulo{
     font-family:'IBM Plex Mono', monospace;
     font-size: 0.72rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
+    margin-bottom: 0.9rem;
+    display:block;
   }
-  .panel-grafico-titulo .num{
-    color: var(--brass);
-    margin-right: 0.4rem;
-  }
-  canvas.chart-canvas{ max-height: 240px; }
+  canvas.chart-canvas{ max-height: 220px; }
 
-  .estado-vacio{
-    text-align:center;
-    padding: 3rem 1rem;
-    color: var(--muted);
-    font-family:'IBM Plex Mono', monospace;
-    font-size: 0.85rem;
-  }
-  .estado-vacio strong{ color: var(--text); display:block; margin-bottom:0.4rem; font-family:'Fraunces', serif; font-size:1.05rem; font-weight:600;}
-
-  /* ============ SENSORES / FOOTER ============ */
   .sensores-estado{
     max-width: 1180px;
-    margin: 2.5rem auto 0;
-    padding: 1.4rem clamp(1.2rem, 4vw, 3rem);
-    display:flex;
-    flex-wrap:wrap;
-    gap: 0.5rem 1.6rem;
+    margin: 2rem auto 0;
+    padding: 1.3rem clamp(1.2rem, 4vw, 3rem);
+    display:flex; flex-wrap:wrap; gap: 0.5rem 1.6rem;
     border-top: 1px solid var(--panel-line);
     font-family:'IBM Plex Mono', monospace;
     font-size: 0.72rem;
@@ -323,7 +277,7 @@
   }
   .sensor-chip{ display:flex; align-items:center; gap:0.4rem; }
   .sensor-chip .punto{ width:6px; height:6px; border-radius:50%; background: var(--muted-dim); }
-  .sensor-chip.ok .punto{ background: var(--teal); }
+  .sensor-chip.ok .punto{ background: var(--live); }
   .sensor-chip.mal .punto{ background: var(--alert); }
 
   footer{
@@ -337,6 +291,7 @@
   @media (max-width: 640px){
     .grid-graficos{ grid-template-columns: 1fr; }
     .topbar{ flex-direction:column; align-items:flex-start; gap:0.5rem; }
+    .hero-cabecera{ flex-direction:column; align-items:flex-start; }
   }
 </style>
 </head>
@@ -355,90 +310,89 @@
   </div>
 
   <section class="hero">
-    <p class="hero-eyebrow">Lectura actual</p>
-    <h1 class="hero-titulo">Condiciones ambientales reportadas por la estación en tiempo real.</h1>
-
-    <div class="lecturas" id="lecturas">
-      <!-- las tarjetas se llenan por JS -->
+    <div class="hero-cabecera">
+      <div class="temp-actual-bloque">
+        <span class="temp-actual-label">Temperatura actual</span>
+        <span class="temp-actual-valor" id="tempActual">—<span class="grado">°C</span></span>
+      </div>
+      <div class="selector-rango" id="selectorRango">
+        <button data-rango="dia" class="activo">Día</button>
+        <button data-rango="semana">Semana</button>
+        <button data-rango="mes">Mes</button>
+      </div>
     </div>
 
-    <div class="barografo-wrap">
-      <div class="barografo-cabecera">
-        <span class="titulo">Tendencia de presión — últimas lecturas de hoy</span>
-        <span class="rango" id="rangoBarografo">—</span>
+    <div class="chips-extremos">
+      <div class="chip max">
+        <span class="punto-chip"></span>
+        <span class="texto-chip">
+          <span class="etiqueta">Máxima</span>
+          <span class="valor" id="tempMaxima">—</span><span class="cuando" id="tempMaximaCuando"></span>
+        </span>
       </div>
-      <canvas id="barografo"></canvas>
+      <div class="chip min">
+        <span class="punto-chip"></span>
+        <span class="texto-chip">
+          <span class="etiqueta">Mínima</span>
+          <span class="valor" id="tempMinima">—</span><span class="cuando" id="tempMinimaCuando"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="panel-hero-grafico">
+      <canvas id="graficoTemperatura"></canvas>
+      <div class="grafico-vacio" id="graficoVacio" style="display:none;">
+        Sin lecturas todavía para este rango.<br>En cuanto la estación publique, aparecerán aquí.
+      </div>
     </div>
   </section>
 
-  <section class="historial">
-    <div class="historial-cabecera">
-      <span class="historial-titulo">Historial</span>
-      <div class="controles-fecha">
-        <button class="btn-dia activo" id="btnHoy" data-modo="hoy">Hoy</button>
-        <button class="btn-dia" id="btnAyer" data-modo="ayer">Ayer</button>
-        <input type="date" id="selectorFecha">
-      </div>
-    </div>
+  <section class="secundario">
+    <p class="secundario-titulo">Otras lecturas — hoy</p>
 
-    <div id="contenedorGraficos">
-      <div class="grid-graficos">
-        <div class="panel-grafico">
-          <div class="panel-grafico-cabecera">
-            <span class="panel-grafico-titulo"><span class="num">01</span>Temperatura &amp; humedad</span>
-          </div>
-          <canvas class="chart-canvas" id="graficoTempHum"></canvas>
-        </div>
-        <div class="panel-grafico">
-          <div class="panel-grafico-cabecera">
-            <span class="panel-grafico-titulo"><span class="num">02</span>Presión &amp; altitud</span>
-          </div>
-          <canvas class="chart-canvas" id="graficoPresionAlt"></canvas>
-        </div>
-        <div class="panel-grafico">
-          <div class="panel-grafico-cabecera">
-            <span class="panel-grafico-titulo"><span class="num">03</span>Luminosidad</span>
-          </div>
-          <canvas class="chart-canvas" id="graficoLux"></canvas>
-        </div>
-        <div class="panel-grafico">
-          <div class="panel-grafico-cabecera">
-            <span class="panel-grafico-titulo"><span class="num">04</span>Eventos de movimiento (PIR)</span>
-          </div>
-          <canvas class="chart-canvas" id="graficoPIR"></canvas>
-        </div>
+    <div class="grid-secundario" id="lecturasMini"></div>
+
+    <div class="grid-graficos">
+      <div class="panel-grafico">
+        <span class="panel-grafico-titulo">Humedad &amp; presión</span>
+        <canvas class="chart-canvas" id="graficoHumPres"></canvas>
+      </div>
+      <div class="panel-grafico">
+        <span class="panel-grafico-titulo">Luminosidad</span>
+        <canvas class="chart-canvas" id="graficoLux"></canvas>
+      </div>
+      <div class="panel-grafico">
+        <span class="panel-grafico-titulo">Eventos de movimiento (PIR)</span>
+        <canvas class="chart-canvas" id="graficoPIR"></canvas>
       </div>
     </div>
   </section>
 
   <div class="sensores-estado" id="sensoresEstado"></div>
 
-  <footer>STN_MTRLGC · datos vía MQTT → Google Sheets · actualiza automáticamente cada 30 s</footer>
+  <footer>STN_MTRLGC · datos vía MQTT → Google Sheets · el gráfico de temperatura se actualiza en tiempo real</footer>
 
 <script>
 // ======================================================
 // ============== CONFIGURACIÓN ==========================
 // ======================================================
 
-// Pega aquí la URL "/exec" de tu implementación de Apps Script
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxR7cHcMKM98nQDauc4M0rTbgM37H2zPQyC2q_T5k1gGDAsfEDatk7eStGdJ8Wr5Sc7/exec";
 
-// Broker público, mismo que usa el ESP32. La página se conecta por WebSocket
-// (los ESP32 usan MQTT "crudo" en el puerto 1883; el navegador necesita WS/WSS).
 const MQTT_WS_URL = "wss://broker.hivemq.com:8884/mqtt";
 const MQTT_TOPIC  = "esp_tlm/datos";
 
-// Cada cuánto refrescar el historial/gráficos desde la hoja (datos ya guardados)
-const INTERVALO_HISTORIAL = 30000; // 30 s
+const INTERVALO_HISTORIAL = 30000; // 30 s: refresco de fondo desde Sheets
 
 // ======================================================
 // ============== ESTADO GLOBAL ===========================
 // ======================================================
 
-let modoFecha = "hoy";        // "hoy" | "ayer" | "custom"
-let fechaSeleccionada = fmtFecha(new Date());
-let graficos = {};
+let rangoActivo = "dia"; // "dia" | "semana" | "mes"
+let lecturasHoy = [];     // cache en memoria, se alimenta por push MQTT
+let todasLasFilas = null; // cache de todas las filas (para semana/mes)
 let ultimaRecepcionMQTT = null;
+let graficos = {};
 
 // ======================================================
 // ============== UTILIDADES ==============================
@@ -449,6 +403,11 @@ function fmtFecha(d){
   const m = String(d.getMonth()+1).padStart(2,"0");
   const dd = String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${dd}`;
+}
+
+function fmtFechaCorta(fechaStr){
+  const [y,m,d] = fechaStr.split("-");
+  return `${d}/${m}`;
 }
 
 function horaLocal(){
@@ -463,7 +422,7 @@ function numOrNull(v){
 
 async function pedirJSON(params){
   const url = new URL(APPS_SCRIPT_URL);
-  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  Object.entries(params || {}).forEach(([k,v]) => url.searchParams.set(k, v));
   const resp = await fetch(url.toString());
   if(!resp.ok) throw new Error("Error de red: " + resp.status);
   return resp.json();
@@ -477,42 +436,49 @@ setInterval(() => { document.getElementById('reloj').textContent = horaLocal(); 
 document.getElementById('reloj').textContent = horaLocal();
 
 // ======================================================
-// ============== TARJETAS DE LECTURA ACTUAL ==============
+// ============== ESTADO DE CONEXIÓN =======================
 // ======================================================
 
-const DEFINICION_LECTURAS = [
-  { clave:'temp_c',       label:'Temperatura',   unidad:'°C',   dec:1, acento:true },
-  { clave:'hum_pct',      label:'Humedad',       unidad:'%',    dec:0 },
-  { clave:'presion_hpa',  label:'Presión',       unidad:'hPa',  dec:1 },
-  { clave:'lux',          label:'Luminosidad',   unidad:'lux',  dec:0 },
-  { clave:'altitud_m',    label:'Altitud',       unidad:'m',    dec:0 },
-  { clave:'distancia_mm', label:'Distancia',     unidad:'mm',   dec:0 },
+function marcarConectado(conectado){
+  const punto = document.getElementById('puntoVivo');
+  const texto = document.getElementById('textoEstado');
+  if(conectado){
+    punto.classList.remove('offline');
+    texto.textContent = ultimaRecepcionMQTT ? `en vivo · ${ultimaRecepcionMQTT}` : 'suscrito · esperando datos…';
+  } else {
+    punto.classList.add('offline');
+    texto.textContent = 'desconectado del broker';
+  }
+}
+
+// ======================================================
+// ============== LECTURAS SECUNDARIAS (mini tarjetas) =====
+// ======================================================
+
+const DEFINICION_MINI = [
+  { clave:'hum_pct',      label:'Humedad',     unidad:'%',   dec:0 },
+  { clave:'presion_hpa',  label:'Presión',     unidad:'hPa', dec:1 },
+  { clave:'lux',          label:'Luz',         unidad:'lux', dec:0 },
+  { clave:'altitud_m',    label:'Altitud',     unidad:'m',   dec:0 },
+  { clave:'distancia_mm', label:'Distancia',   unidad:'mm',  dec:0 },
 ];
 
-function renderLecturas(ultimo){
-  const cont = document.getElementById('lecturas');
+function renderMini(ultimo){
+  const cont = document.getElementById('lecturasMini');
   cont.innerHTML = "";
 
-  DEFINICION_LECTURAS.forEach(def => {
+  DEFINICION_MINI.forEach(def => {
     const val = ultimo ? numOrNull(ultimo[def.clave]) : null;
     const div = document.createElement('div');
-    div.className = 'lectura' + (def.acento ? ' acento' : '');
-    div.innerHTML = `
-      <div class="lectura-label">${def.label}</div>
-      <div class="lectura-valor">${val === null ? '—' : val.toFixed(def.dec)}<span class="unidad">${def.unidad}</span></div>
-    `;
+    div.className = 'lectura-mini';
+    div.innerHTML = `<div class="label">${def.label}</div><div class="valor">${val===null?'—':val.toFixed(def.dec)}<span class="unidad">${def.unidad}</span></div>`;
     cont.appendChild(div);
   });
 
-  // Tarjeta PIR / movimiento
   const pirActivo = ultimo && (ultimo.pir === 1 || ultimo.pir === "1" || ultimo.pir === true);
   const divPir = document.createElement('div');
-  divPir.className = 'lectura' + (pirActivo ? ' alerta-activa' : '');
-  divPir.innerHTML = `
-    <div class="lectura-label">Movimiento</div>
-    <div class="lectura-valor">${ultimo ? (pirActivo ? 'Detectado' : 'Sin novedad') : '—'}</div>
-    <div class="lectura-sub">${ultimo && ultimo.hora ? 'últ. lectura ' + ultimo.hora : ''}</div>
-  `;
+  divPir.className = 'lectura-mini' + (pirActivo ? ' alerta' : '');
+  divPir.innerHTML = `<div class="label">Movimiento</div><div class="valor">${ultimo ? (pirActivo?'Detectado':'Sin novedad') : '—'}</div>`;
   cont.appendChild(divPir);
 }
 
@@ -531,233 +497,267 @@ function renderSensoresEstado(ultimo){
   }).join("");
 }
 
-// ======================================================
-// ============== LECTURA ACTUAL: CARGA INICIAL DESDE SHEETS =
-// ======================================================
-// Al abrir la página, mientras llega el primer mensaje MQTT,
-// se pinta lo último que ya quedó guardado en la hoja.
-
-async function cargarLecturaInicial(){
-  try{
-    const ultimo = await pedirJSON({ ultimos: 1 });
-    const tieneDatos = ultimo && Object.keys(ultimo).length > 0;
-    renderLecturas(tieneDatos ? ultimo : null);
-    renderSensoresEstado(tieneDatos ? ultimo : null);
-    if(tieneDatos){
-      document.getElementById('textoEstado').textContent = `últ. guardado ${ultimo.fecha} ${ultimo.hora}`;
-    }
-  } catch(err){
-    console.error(err);
-  }
+function actualizarTempActualUI(temp){
+  const el = document.getElementById('tempActual');
+  el.innerHTML = (temp===null||temp===undefined) ? '—<span class="grado">°C</span>' : `${temp.toFixed(1)}<span class="grado">°C</span>`;
 }
 
 // ======================================================
-// ============== ESTADO DE CONEXIÓN (MQTT) =================
+// ============== MÁXIMA / MÍNIMA ===========================
 // ======================================================
 
-function marcarConectado(conectado){
-  const punto = document.getElementById('puntoVivo');
-  const texto = document.getElementById('textoEstado');
-  if(conectado){
-    punto.classList.remove('offline');
-    texto.textContent = ultimaRecepcionMQTT
-      ? `en vivo · recibido ${ultimaRecepcionMQTT}`
-      : 'suscrito · esperando datos…';
-  } else {
-    punto.classList.add('offline');
-    texto.textContent = 'desconectado del broker';
+function actualizarExtremos(filas, esRangoUnDia){
+  const conTemp = filas.filter(f => numOrNull(f.temp_c) !== null);
+
+  if(!conTemp.length){
+    document.getElementById('tempMaxima').textContent = '—';
+    document.getElementById('tempMinima').textContent = '—';
+    document.getElementById('tempMaximaCuando').textContent = '';
+    document.getElementById('tempMinimaCuando').textContent = '';
+    return;
   }
+
+  let filaMax = conTemp[0], filaMin = conTemp[0];
+  conTemp.forEach(f => {
+    if(Number(f.temp_c) > Number(filaMax.temp_c)) filaMax = f;
+    if(Number(f.temp_c) < Number(filaMin.temp_c)) filaMin = f;
+  });
+
+  document.getElementById('tempMaxima').textContent = `${Number(filaMax.temp_c).toFixed(1)}°C`;
+  document.getElementById('tempMinima').textContent = `${Number(filaMin.temp_c).toFixed(1)}°C`;
+
+  document.getElementById('tempMaximaCuando').textContent = esRangoUnDia
+    ? filaMax.hora : `${fmtFechaCorta(filaMax.fecha)} ${filaMax.hora}`;
+  document.getElementById('tempMinimaCuando').textContent = esRangoUnDia
+    ? filaMin.hora : `${fmtFechaCorta(filaMin.fecha)} ${filaMin.hora}`;
 }
 
 // ======================================================
-// ============== BARÓGRAFO (firma visual) =================
+// ============== GRÁFICO HERO: TEMPERATURA =================
 // ======================================================
 
-async function actualizarBarografo(){
-  try{
-    const filas = await pedirJSON({ fecha: fmtFecha(new Date()) });
-    const presiones = filas.map(f => numOrNull(f.presion_hpa)).filter(v => v !== null);
-
-    const canvas = document.getElementById('barografo');
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width = canvas.clientWidth * devicePixelRatio;
-    const h = canvas.height = canvas.clientHeight * devicePixelRatio;
-    ctx.clearRect(0,0,w,h);
-
-    if(presiones.length < 2){
-      document.getElementById('rangoBarografo').textContent = 'datos insuficientes';
-      return;
-    }
-
-    const min = Math.min(...presiones), max = Math.max(...presiones);
-    const rango = (max - min) || 1;
-    const pad = 8 * devicePixelRatio;
-
-    ctx.beginPath();
-    presiones.forEach((p, i) => {
-      const x = pad + (i / (presiones.length - 1)) * (w - pad*2);
-      const y = h - pad - ((p - min) / rango) * (h - pad*2);
-      i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-    });
-    ctx.strokeStyle = '#c7963c';
-    ctx.lineWidth = 2 * devicePixelRatio;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
-
-    // Punto final
-    const ultX = pad + (w - pad*2);
-    const ultY = h - pad - ((presiones[presiones.length-1] - min) / rango) * (h - pad*2);
-    ctx.beginPath();
-    ctx.arc(ultX, ultY, 3.5 * devicePixelRatio, 0, Math.PI*2);
-    ctx.fillStyle = '#5fc4b8';
-    ctx.fill();
-
-    document.getElementById('rangoBarografo').textContent =
-      `${min.toFixed(1)} – ${max.toFixed(1)} hPa`;
-  } catch(err){
-    console.error(err);
-  }
-}
-
-// ======================================================
-// ============== GRÁFICOS DE HISTORIAL =====================
-// ======================================================
-
-const OPCIONES_BASE = {
+const OPCIONES_BASE_TEMP = {
   responsive:true,
   maintainAspectRatio:false,
   interaction:{ mode:'index', intersect:false },
   plugins:{
-    legend:{
-      labels:{ color:'#8a9aa5', font:{ family:"'IBM Plex Mono', monospace", size:11 }, boxWidth:12, usePointStyle:true }
-    },
+    legend:{ display:false },
     tooltip:{
-      backgroundColor:'#16262f',
-      borderColor:'#24373f',
+      backgroundColor:'#101c1f',
+      borderColor:'#1d2e31',
       borderWidth:1,
-      titleColor:'#e8e2d3',
-      bodyColor:'#e8e2d3',
+      titleColor:'#eef2f0',
+      bodyColor:'#eef2f0',
       titleFont:{ family:"'IBM Plex Mono', monospace", size:11 },
       bodyFont:{ family:"'IBM Plex Mono', monospace", size:11 },
     }
   },
   scales:{
     x:{
-      ticks:{ color:'#5c6c74', font:{ family:"'IBM Plex Mono', monospace", size:10 }, maxRotation:0 },
-      grid:{ color:'#1c2c34' }
+      ticks:{ color:'#536265', font:{ family:"'IBM Plex Mono', monospace", size:10 }, maxRotation:0, autoSkip:true, maxTicksLimit:10 },
+      grid:{ color:'#152225' }
     },
     y:{
-      ticks:{ color:'#5c6c74', font:{ family:"'IBM Plex Mono', monospace", size:10 } },
-      grid:{ color:'#1c2c34' }
+      ticks:{ color:'#536265', font:{ family:"'IBM Plex Mono', monospace", size:10 }, callback:(v)=>v+'°' },
+      grid:{ color:'#152225' }
     }
   }
 };
 
-function crearOActualizarGrafico(idCanvas, tipo, datasets, labels, opcionesExtra = {}){
-  const ctx = document.getElementById(idCanvas).getContext('2d');
+function renderGraficoTemperaturaDia(filas){
+  const labels = filas.map(f => f.hora);
+  const datos = filas.map(f => numOrNull(f.temp_c));
+
+  const ctx = document.getElementById('graficoTemperatura').getContext('2d');
+  const gradiente = ctx.createLinearGradient(0,0,0,320);
+  gradiente.addColorStop(0, 'rgba(79,209,197,0.35)');
+  gradiente.addColorStop(1, 'rgba(79,209,197,0)');
+
+  crearOActualizarGraficoTemp([
+    { label:'Temperatura', data: datos, borderColor:'#4fd1c5', backgroundColor: gradiente, tension:0.35, pointRadius:0, borderWidth:2.5, fill:true },
+  ], labels);
+}
+
+function renderGraficoTemperaturaAgregado(diasAgregados){
+  // diasAgregados: [{fecha, min, max, avg}, ...] ordenado ascendente
+  const labels = diasAgregados.map(d => fmtFechaCorta(d.fecha));
+
+  crearOActualizarGraficoTemp([
+    { label:'Máxima', data: diasAgregados.map(d=>d.max), borderColor:'rgba(232,163,61,0.9)', backgroundColor:'rgba(232,163,61,0.12)', tension:0.3, pointRadius:2, borderWidth:1.5, fill:'+1' },
+    { label:'Mínima', data: diasAgregados.map(d=>d.min), borderColor:'rgba(91,141,201,0.9)', backgroundColor:'transparent', tension:0.3, pointRadius:2, borderWidth:1.5, fill:false },
+    { label:'Promedio', data: diasAgregados.map(d=>d.avg), borderColor:'#4fd1c5', backgroundColor:'transparent', tension:0.3, pointRadius:2, borderWidth:2.5, fill:false, borderDash:[] },
+  ], labels, true);
+}
+
+function crearOActualizarGraficoTemp(datasets, labels, conLeyenda){
+  const idCanvas = 'graficoTemperatura';
+  const vacio = document.getElementById('graficoVacio');
+  const canvas = document.getElementById(idCanvas);
+
+  const hayDatos = labels.length > 0 && datasets.some(d => d.data.some(v => v !== null));
+  vacio.style.display = hayDatos ? 'none' : 'flex';
+  canvas.style.visibility = hayDatos ? 'visible' : 'hidden';
+  if(!hayDatos) return;
+
+  const opciones = JSON.parse(JSON.stringify(OPCIONES_BASE_TEMP));
+  opciones.plugins.legend.display = !!conLeyenda;
+  opciones.plugins.legend.labels = { color:'#7f9295', font:{ family:"'IBM Plex Mono', monospace", size:11 }, boxWidth:12, usePointStyle:true };
+  // callbacks se pierden al serializar con JSON, los re-inyectamos:
+  opciones.scales.y.ticks.callback = (v)=>v+'°';
 
   if(graficos[idCanvas]){
     graficos[idCanvas].data.labels = labels;
     graficos[idCanvas].data.datasets = datasets;
+    graficos[idCanvas].options.plugins.legend.display = !!conLeyenda;
     graficos[idCanvas].update();
     return;
   }
 
-  graficos[idCanvas] = new Chart(ctx, {
-    type: tipo,
-    data: { labels, datasets },
-    options: Object.assign({}, OPCIONES_BASE, opcionesExtra)
+  graficos[idCanvas] = new Chart(canvas.getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets },
+    options: opciones
   });
 }
 
-function mostrarVacio(mostrar){
-  const cont = document.getElementById('contenedorGraficos');
-  if(mostrar){
-    cont.innerHTML = `<div class="estado-vacio"><strong>Sin lecturas para este día</strong>Prueba con otra fecha o revisa que la estación esté transmitiendo.</div>`;
-    graficos = {};
-  }
+// ======================================================
+// ============== AGREGACIÓN POR DÍA (semana/mes) ===========
+// ======================================================
+
+function agregarPorDia(filas){
+  const grupos = {};
+  filas.forEach(f => {
+    const t = numOrNull(f.temp_c);
+    if(t === null) return;
+    if(!grupos[f.fecha]) grupos[f.fecha] = { fecha:f.fecha, min:t, max:t, suma:t, n:1 };
+    else {
+      const g = grupos[f.fecha];
+      g.min = Math.min(g.min, t);
+      g.max = Math.max(g.max, t);
+      g.suma += t; g.n += 1;
+    }
+  });
+  return Object.values(grupos)
+    .map(g => ({ fecha:g.fecha, min:g.min, max:g.max, avg: g.suma/g.n }))
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
 }
 
-async function cargarHistorialDia(fecha){
+function filtrarUltimosDias(filas, dias){
+  const limite = new Date();
+  limite.setDate(limite.getDate() - (dias - 1));
+  const limiteStr = fmtFecha(limite);
+  return filas.filter(f => f.fecha >= limiteStr);
+}
+
+// ======================================================
+// ============== CARGA POR RANGO ===========================
+// ======================================================
+
+async function cargarRango(rango){
+  rangoActivo = rango;
+
+  if(rango === 'dia'){
+    // Si ya tenemos caché de hoy (por push MQTT), pinta de una vez;
+    // igual se refresca contra Sheets para no perder nada.
+    const filas = await pedirJSON({ fecha: fmtFecha(new Date()) });
+    lecturasHoy = filas;
+    renderGraficoTemperaturaDia(filas);
+    actualizarExtremos(filas, true);
+    return;
+  }
+
+  // semana / mes: se trabaja sobre todas las filas guardadas
+  if(!todasLasFilas){
+    todasLasFilas = await pedirJSON({});
+  }
+  const dias = rango === 'semana' ? 7 : 30;
+  const filas = filtrarUltimosDias(todasLasFilas, dias);
+  const agregado = agregarPorDia(filas);
+
+  renderGraficoTemperaturaAgregado(agregado);
+  actualizarExtremos(filas, false);
+}
+
+document.getElementById('selectorRango').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-rango]');
+  if(!btn) return;
+  document.querySelectorAll('#selectorRango button').forEach(b => b.classList.remove('activo'));
+  btn.classList.add('activo');
+  todasLasFilas = null; // fuerza refresco al cambiar de rango
+  cargarRango(btn.dataset.rango);
+});
+
+// ======================================================
+// ============== OTROS GRÁFICOS (secundarios, hoy) =========
+// ======================================================
+
+const OPCIONES_SECUNDARIO = {
+  responsive:true,
+  maintainAspectRatio:false,
+  interaction:{ mode:'index', intersect:false },
+  plugins:{
+    legend:{ labels:{ color:'#7f9295', font:{ family:"'IBM Plex Mono', monospace", size:10 }, boxWidth:10, usePointStyle:true } },
+    tooltip:{ backgroundColor:'#101c1f', borderColor:'#1d2e31', borderWidth:1, titleColor:'#eef2f0', bodyColor:'#eef2f0' }
+  },
+  scales:{
+    x:{ ticks:{ color:'#536265', font:{ family:"'IBM Plex Mono', monospace", size:9 }, maxRotation:0, autoSkip:true, maxTicksLimit:8 }, grid:{ color:'#152225' } },
+    y:{ ticks:{ color:'#536265', font:{ family:"'IBM Plex Mono', monospace", size:9 } }, grid:{ color:'#152225' } }
+  }
+};
+
+function crearOActualizarSecundario(id, tipo, datasets, labels, extra){
+  const ctx = document.getElementById(id).getContext('2d');
+  if(graficos[id]){
+    graficos[id].data.labels = labels;
+    graficos[id].data.datasets = datasets;
+    graficos[id].update();
+    return;
+  }
+  graficos[id] = new Chart(ctx, { type:tipo, data:{labels, datasets}, options: Object.assign({}, OPCIONES_SECUNDARIO, extra||{}) });
+}
+
+function renderSecundarios(filasHoy){
+  const labels = filasHoy.map(f => f.hora);
+
+  crearOActualizarSecundario('graficoHumPres', 'line', [
+    { label:'Humedad %', data: filasHoy.map(f=>numOrNull(f.hum_pct)), borderColor:'#4fd1c5', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y' },
+    { label:'Presión hPa', data: filasHoy.map(f=>numOrNull(f.presion_hpa)), borderColor:'#e8a33d', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y1' },
+  ], labels, {
+    scales:{ x:OPCIONES_SECUNDARIO.scales.x, y:{...OPCIONES_SECUNDARIO.scales.y, position:'left'}, y1:{...OPCIONES_SECUNDARIO.scales.y, position:'right', grid:{drawOnChartArea:false}} }
+  });
+
+  crearOActualizarSecundario('graficoLux', 'line', [
+    { label:'Lux', data: filasHoy.map(f=>numOrNull(f.lux)), borderColor:'#e8a33d', backgroundColor:'rgba(232,163,61,0.1)', tension:0.3, pointRadius:0, fill:true },
+  ], labels, { plugins:{ legend:{display:false}, tooltip:OPCIONES_SECUNDARIO.plugins.tooltip } });
+
+  crearOActualizarSecundario('graficoPIR', 'bar', [
+    { label:'Movimiento', data: filasHoy.map(f => (f.pir===1||f.pir==="1")?1:0), backgroundColor:'#d1614a', barPercentage:0.5 },
+  ], labels, {
+    plugins:{ legend:{display:false}, tooltip:OPCIONES_SECUNDARIO.plugins.tooltip },
+    scales:{ x:OPCIONES_SECUNDARIO.scales.x, y:{...OPCIONES_SECUNDARIO.scales.y, min:0, max:1, ticks:{...OPCIONES_SECUNDARIO.scales.y.ticks, stepSize:1}} }
+  });
+}
+
+// ======================================================
+// ============== CARGA INICIAL DESDE SHEETS ================
+// ======================================================
+
+async function cargaInicial(){
   try{
-    const filas = await pedirJSON({ fecha });
+    const ultimo = await pedirJSON({ ultimos: 1 });
+    const tieneDatos = ultimo && Object.keys(ultimo).length > 0;
+    renderMini(tieneDatos ? ultimo : null);
+    renderSensoresEstado(tieneDatos ? ultimo : null);
+    if(tieneDatos) actualizarTempActualUI(numOrNull(ultimo.temp_c));
+  } catch(err){ console.error(err); }
 
-    if(!filas.length){
-      mostrarVacio(true);
-      return;
-    }
-
-    // Si veníamos de un estado vacío, reconstruye el HTML de los canvases
-    if(!document.getElementById('graficoTempHum')){
-      document.getElementById('contenedorGraficos').innerHTML = `
-        <div class="grid-graficos">
-          <div class="panel-grafico">
-            <div class="panel-grafico-cabecera"><span class="panel-grafico-titulo"><span class="num">01</span>Temperatura &amp; humedad</span></div>
-            <canvas class="chart-canvas" id="graficoTempHum"></canvas>
-          </div>
-          <div class="panel-grafico">
-            <div class="panel-grafico-cabecera"><span class="panel-grafico-titulo"><span class="num">02</span>Presión &amp; altitud</span></div>
-            <canvas class="chart-canvas" id="graficoPresionAlt"></canvas>
-          </div>
-          <div class="panel-grafico">
-            <div class="panel-grafico-cabecera"><span class="panel-grafico-titulo"><span class="num">03</span>Luminosidad</span></div>
-            <canvas class="chart-canvas" id="graficoLux"></canvas>
-          </div>
-          <div class="panel-grafico">
-            <div class="panel-grafico-cabecera"><span class="panel-grafico-titulo"><span class="num">04</span>Eventos de movimiento (PIR)</span></div>
-            <canvas class="chart-canvas" id="graficoPIR"></canvas>
-          </div>
-        </div>`;
-    }
-
-    const labels = filas.map(f => f.hora);
-
-    crearOActualizarGrafico('graficoTempHum', 'line', [
-      { label:'Temp °C', data: filas.map(f=>numOrNull(f.temp_c)), borderColor:'#c7963c', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y' },
-      { label:'Humedad %', data: filas.map(f=>numOrNull(f.hum_pct)), borderColor:'#5fc4b8', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y1' },
-    ], labels, {
-      scales:{
-        x: OPCIONES_BASE.scales.x,
-        y:{ ...OPCIONES_BASE.scales.y, position:'left' },
-        y1:{ ...OPCIONES_BASE.scales.y, position:'right', grid:{ drawOnChartArea:false } }
-      }
-    });
-
-    crearOActualizarGrafico('graficoPresionAlt', 'line', [
-      { label:'Presión hPa', data: filas.map(f=>numOrNull(f.presion_hpa)), borderColor:'#c7963c', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y' },
-      { label:'Altitud m', data: filas.map(f=>numOrNull(f.altitud_m)), borderColor:'#8a9aa5', backgroundColor:'transparent', tension:0.3, pointRadius:0, yAxisID:'y1' },
-    ], labels, {
-      scales:{
-        x: OPCIONES_BASE.scales.x,
-        y:{ ...OPCIONES_BASE.scales.y, position:'left' },
-        y1:{ ...OPCIONES_BASE.scales.y, position:'right', grid:{ drawOnChartArea:false } }
-      }
-    });
-
-    crearOActualizarGrafico('graficoLux', 'line', [
-      { label:'Luminosidad (lux)', data: filas.map(f=>numOrNull(f.lux)), borderColor:'#5fc4b8', backgroundColor:'rgba(95,196,184,0.12)', tension:0.3, pointRadius:0, fill:true },
-    ], labels);
-
-    crearOActualizarGrafico('graficoPIR', 'bar', [
-      { label:'Movimiento', data: filas.map(f => (f.pir===1||f.pir==="1") ? 1 : 0), backgroundColor:'#c0533f', barPercentage:0.5 },
-    ], labels, {
-      scales:{
-        x: OPCIONES_BASE.scales.x,
-        y:{ ...OPCIONES_BASE.scales.y, min:0, max:1, ticks:{ ...OPCIONES_BASE.scales.y.ticks, stepSize:1 } }
-      }
-    });
-
-  } catch(err){
-    console.error(err);
-    mostrarVacio(true);
-  }
+  await cargarRango('dia');
+  renderSecundarios(lecturasHoy);
 }
 
 // ======================================================
-// ============== CLIENTE MQTT (suscripción del navegador) ==
+// ============== CLIENTE MQTT ==============================
 // ======================================================
-// La página hace todo el trabajo: se suscribe al topic del ESP32,
-// recibe cada lectura y la guarda en Sheets. No hay puente intermedio.
 
 const clienteMqtt = mqtt.connect(MQTT_WS_URL, {
   clientId: 'stn_web_' + Math.random().toString(16).slice(2),
@@ -766,50 +766,41 @@ const clienteMqtt = mqtt.connect(MQTT_WS_URL, {
 });
 
 clienteMqtt.on('connect', () => {
-  console.log('[MQTT] conectado a', MQTT_WS_URL);
-  clienteMqtt.subscribe(MQTT_TOPIC, (err) => {
-    if(err) console.error('[MQTT] error al suscribirse:', err);
-    else console.log('[MQTT] suscrito a', MQTT_TOPIC);
-  });
+  clienteMqtt.subscribe(MQTT_TOPIC);
   marcarConectado(true);
 });
-
 clienteMqtt.on('reconnect', () => marcarConectado(false));
 clienteMqtt.on('close',      () => marcarConectado(false));
 clienteMqtt.on('error', (err) => { console.error('[MQTT] error:', err); marcarConectado(false); });
 
 clienteMqtt.on('message', (topic, mensaje) => {
   let data;
-  try{
-    data = JSON.parse(mensaje.toString());
-  } catch(err){
-    console.error('[MQTT] payload no es JSON válido:', mensaje.toString());
-    return;
-  }
+  try{ data = JSON.parse(mensaje.toString()); }
+  catch(err){ console.error('[MQTT] payload no es JSON válido:', mensaje.toString()); return; }
 
   const ahora = new Date();
   ultimaRecepcionMQTT = ahora.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 
-  // Pinta de inmediato con la hora local, sin esperar a Sheets
-  const paraRender = Object.assign({}, data, {
-    fecha: fmtFecha(ahora),
-    hora: ultimaRecepcionMQTT,
-  });
-  renderLecturas(paraRender);
-  renderSensoresEstado(paraRender);
+  const fila = Object.assign({}, data, { fecha: fmtFecha(ahora), hora: ultimaRecepcionMQTT });
+
+  renderMini(fila);
+  renderSensoresEstado(fila);
+  actualizarTempActualUI(numOrNull(fila.temp_c));
   marcarConectado(true);
+
+  // Actualiza en vivo el gráfico hero si se está viendo "Hoy"
+  if(rangoActivo === 'dia'){
+    lecturasHoy.push(fila);
+    renderGraficoTemperaturaDia(lecturasHoy);
+    actualizarExtremos(lecturasHoy, true);
+    renderSecundarios(lecturasHoy);
+  }
 
   guardarEnSheets(data);
 });
 
-// ======================================================
-// ============== GUARDAR EN GOOGLE SHEETS ===================
-// ======================================================
-
 async function guardarEnSheets(data){
   try{
-    // Content-Type text/plain evita el preflight CORS; Apps Script igual
-    // puede leer el JSON desde e.postData.contents.
     const resp = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -822,57 +813,18 @@ async function guardarEnSheets(data){
 }
 
 // ======================================================
-// ============== CONTROLES DE FECHA ========================
+// ============== REFRESCO DE FONDO ==========================
 // ======================================================
 
-document.getElementById('selectorFecha').value = fmtFecha(new Date());
-
-function marcarBotonActivo(id){
-  document.querySelectorAll('.btn-dia').forEach(b => b.classList.remove('activo'));
-  if(id) document.getElementById(id).classList.add('activo');
-}
-
-document.getElementById('btnHoy').addEventListener('click', () => {
-  modoFecha = 'hoy';
-  fechaSeleccionada = fmtFecha(new Date());
-  document.getElementById('selectorFecha').value = fechaSeleccionada;
-  marcarBotonActivo('btnHoy');
-  cargarHistorialDia(fechaSeleccionada);
-});
-
-document.getElementById('btnAyer').addEventListener('click', () => {
-  const ayer = new Date();
-  ayer.setDate(ayer.getDate() - 1);
-  modoFecha = 'ayer';
-  fechaSeleccionada = fmtFecha(ayer);
-  document.getElementById('selectorFecha').value = fechaSeleccionada;
-  marcarBotonActivo('btnAyer');
-  cargarHistorialDia(fechaSeleccionada);
-});
-
-document.getElementById('selectorFecha').addEventListener('change', (e) => {
-  modoFecha = 'custom';
-  fechaSeleccionada = e.target.value;
-  marcarBotonActivo(null);
-  cargarHistorialDia(fechaSeleccionada);
-});
-
-// ======================================================
-// ============== CICLO DE ACTUALIZACIÓN AUTOMÁTICA =========
-// ======================================================
-
-function actualizarDatosAlmacenados(){
-  actualizarBarografo();
-  // Solo refresca el historial automáticamente si se está viendo "hoy"
-  if(modoFecha === 'hoy'){
-    cargarHistorialDia(fechaSeleccionada);
+setInterval(() => {
+  if(rangoActivo !== 'dia'){
+    // en semana/mes no hay push en vivo; se refresca cada 30s
+    todasLasFilas = null;
+    cargarRango(rangoActivo);
   }
-}
+}, INTERVALO_HISTORIAL);
 
-// Carga inicial: lo último ya guardado, mientras llega el primer mensaje MQTT
-cargarLecturaInicial();
-actualizarDatosAlmacenados();
-setInterval(actualizarDatosAlmacenados, INTERVALO_HISTORIAL);
+cargaInicial();
 </script>
 </body>
 </html>
