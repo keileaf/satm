@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -428,6 +429,7 @@ const MQTT_WS_URL = "wss://broker.hivemq.com:8884/mqtt";
 const MQTT_TOPIC  = "esp_tlm/datos";
 
 const INTERVALO_HISTORIAL = 30000; // 30 s: refresco de fondo desde Sheets
+const MIN_INTERVALO_GUARDADO_MS = 90000; // 90 s: no golpear Apps Script más seguido que esto
 
 // ======================================================
 // ============== ESTADO GLOBAL ===========================
@@ -438,6 +440,7 @@ let lecturasHoy = [];
 let todasLasFilas = null;
 let ultimaRecepcionMQTT = null;
 let ultimaRecepcionTs = null;   // Date.now() del último mensaje, para detectar "sin datos recientes"
+let ultimoIntentoGuardado = 0;  // Date.now() del último POST enviado, para no saturar Apps Script
 let graficos = {};
 
 // ======================================================
@@ -887,26 +890,37 @@ clienteMqtt.on('message', (topic, mensaje) => {
   try{ data = JSON.parse(mensaje.toString()); }
   catch(err){ console.error('[MQTT] payload no es JSON válido:', mensaje.toString()); return; }
 
+  // Guardar primero, SIEMPRE — así un error de renderizado más abajo
+  // nunca puede impedir que la lectura se guarde en Sheets.
+  // (con throttle: no mandamos un POST más seguido que cada 90s)
+  const ahoraMs = Date.now();
+  if(ahoraMs - ultimoIntentoGuardado >= MIN_INTERVALO_GUARDADO_MS){
+    ultimoIntentoGuardado = ahoraMs;
+    guardarEnSheets(data);
+  }
+
   const ahora = new Date();
   ultimaRecepcionMQTT = ahora.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
   ultimaRecepcionTs = Date.now();
   const fila = Object.assign({}, data, { fecha: fmtFecha(ahora), hora: ultimaRecepcionMQTT });
 
-  renderTarjetasColor(fila);
-  renderMini(fila);
-  renderGPS(fila);
-  renderSensoresEstado(fila);
-  actualizarTempActualUI(numOrNull(fila.temp_c));
-  marcarConectado(true);
+  try{
+    renderTarjetasColor(fila);
+    renderMini(fila);
+    renderGPS(fila);
+    renderSensoresEstado(fila);
+    actualizarTempActualUI(numOrNull(fila.temp_c));
+    marcarConectado(true);
 
-  if(rangoActivo === 'dia'){
-    lecturasHoy.push(fila);
-    renderGraficoTemperaturaDia(lecturasHoy);
-    actualizarExtremos(lecturasHoy, true);
-    renderSecundarios(lecturasHoy);
+    if(rangoActivo === 'dia'){
+      lecturasHoy.push(fila);
+      renderGraficoTemperaturaDia(lecturasHoy);
+      actualizarExtremos(lecturasHoy, true);
+      renderSecundarios(lecturasHoy);
+    }
+  } catch(err){
+    console.error('[UI] error al renderizar la lectura (el guardado no se vio afectado):', err);
   }
-
-  guardarEnSheets(data);
 });
 
 async function guardarEnSheets(data){
@@ -916,7 +930,11 @@ async function guardarEnSheets(data){
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(data),
     });
-    if(!resp.ok) console.error('[Sheets] respuesta no OK:', resp.status);
+    if(!resp.ok){
+      console.error('[Sheets] respuesta no OK:', resp.status);
+    } else {
+      console.log('[Sheets] guardado OK ·', new Date().toLocaleTimeString('es-MX'));
+    }
   } catch(err){
     console.error('[Sheets] error al guardar:', err);
   }
