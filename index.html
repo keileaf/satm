@@ -426,7 +426,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx4AIcyHYpnbghr
 // Broker público, mismo que usa el ESP32. La página se conecta por WebSocket
 // (los ESP32 usan MQTT "crudo" en el puerto 1883; el navegador necesita WS/WSS).
 const MQTT_WS_URL = "wss://broker.hivemq.com:8884/mqtt";
-const MQTT_TOPIC  = "STN_MTRLGC";
+const MQTT_TOPIC  = "esp_tlm/datos";
 
 // Cada cuánto refrescar el historial/gráficos desde la hoja (datos ya guardados)
 const INTERVALO_HISTORIAL = 30000; // 30 s
