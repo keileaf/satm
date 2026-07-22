@@ -767,27 +767,75 @@ function opcionesBaseTemp(conLeyenda){
 function renderGraficoTemperaturaDia(filas){
 
   console.log("TEMPERATURAS:");
-console.log(filas.map(f=>f.temp_c));
+  console.log(filas.map(f=>f.temp_c));
+
   const conDatos = filas.filter(f => numOrNull(f.temp_c) !== null);
+
   if(!conDatos.length){
-    mostrarEstadoGrafico('vacio', 'Sin lecturas todavía', 'En cuanto la estación publique, aparecerán aquí.');
+    mostrarEstadoGrafico(
+      'vacio',
+      'Sin lecturas todavía',
+      'En cuanto la estación publique, aparecerán aquí.'
+    );
     return;
   }
+
   mostrarEstadoGrafico(null);
 
   const labels = filas.map(f => f.hora);
+
   const datos = filas.map(f => numOrNull(f.temp_c));
 
-  const ctx = document.getElementById('graficoTemperatura').getContext('2d');
+  // NUEVO
+  const datosHeat = filas.map(f => numOrNull(f.heat_index));
+
+
+  const ctx = document
+    .getElementById('graficoTemperatura')
+    .getContext('2d');
+
+
   const gradiente = ctx.createLinearGradient(0,0,0,300);
-  gradiente.addColorStop(0, 'rgba(31,111,181,0.28)');
-  gradiente.addColorStop(1, 'rgba(31,111,181,0)');
+
+  gradiente.addColorStop(
+    0,
+    'rgba(31,111,181,0.28)'
+  );
+
+  gradiente.addColorStop(
+    1,
+    'rgba(31,111,181,0)'
+  );
+
 
   crearOActualizarGraficoTemp([
-    { label:'Temperatura', data: datos, borderColor:'#1f6fb5', backgroundColor: gradiente, tension:0.35, pointRadius:0, borderWidth:2.5, fill:true },
-  ], labels, false);
-}
 
+    {
+      label:'Temperatura',
+      data:datos,
+      borderColor:'#1f6fb5',
+      backgroundColor:gradiente,
+      tension:0.35,
+      pointRadius:0,
+      borderWidth:2.5,
+      fill:true
+    },
+
+    {
+      label:'Sensación térmica',
+      data:datosHeat,
+      borderColor:'#e53935',
+      backgroundColor:'transparent',
+      tension:0.35,
+      pointRadius:0,
+      borderWidth:2.5,
+      fill:false
+    }
+
+  ], labels, true);
+
+}
+  
 function renderGraficoTemperaturaAgregado(diasAgregados){
   if(!diasAgregados.length){
     mostrarEstadoGrafico('vacio', 'Sin lecturas en este rango', 'Prueba con otro periodo o espera a que se acumulen más días.');
