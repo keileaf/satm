@@ -914,12 +914,9 @@ clienteMqtt.on('message', (topic, mensaje) => {
     actualizarTempActualUI(numOrNull(fila.temp_c));
     marcarConectado(true);
 
-    if(rangoActivo === 'dia'){
-      lecturasHoy.push(fila);
-      renderGraficoTemperaturaDia(lecturasHoy);
-      actualizarExtremos(lecturasHoy, true);
-      renderSecundarios(lecturasHoy);
-    }
+if(rangoActivo === 'dia'){
+  lecturasHoy.push(fila);
+}
   } catch(err){
     console.error('[UI] error al renderizar la lectura (el guardado no se vio afectado):', err);
   }
