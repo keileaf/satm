@@ -676,6 +676,9 @@ function opcionesBaseTemp(conLeyenda){
 }
 
 function renderGraficoTemperaturaDia(filas){
+
+  console.log("TEMPERATURAS:");
+console.log(filas.map(f=>f.temp_c));
   const conDatos = filas.filter(f => numOrNull(f.temp_c) !== null);
   if(!conDatos.length){
     mostrarEstadoGrafico('vacio', 'Sin lecturas todavía', 'En cuanto la estación publique, aparecerán aquí.');
