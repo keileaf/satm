@@ -339,7 +339,8 @@
           <div class="valor" id="tarjetaRadiacion">—<span class="unidad">W/m²</span></div>
         </div>
       </div>
-    </div>
+
+      
 <div class="tarjeta-color azul" id="tarjetaHeat">
   <div class="icono">
     <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
@@ -356,6 +357,7 @@
   </div>
 </div>
 
+    </div>
 
     
     <div class="panel-principal">
@@ -552,47 +554,75 @@ setInterval(() => {
 // ======================================================
 // ============== TARJETAS DE COLOR (arriba) ================
 // ======================================================
-
 function renderTarjetasColor(ultimo){
+
   const set = (id, val, dec) => {
+
     const el = document.getElementById(id);
+    const unidad = el.querySelector('.unidad')?.textContent || "";
+
     const num = ultimo ? numOrNull(ultimo[val]) : null;
-    el.innerHTML = (num===null) ? `—<span class="unidad">${el.querySelector('.unidad')?el.querySelector('.unidad').textContent:''}</span>` : `${num.toFixed(dec)}<span class="unidad">${el.querySelector('.unidad')?el.querySelector('.unidad').textContent:''}</span>`;
-  const heat = calcularHeatIndex(
-    ultimo ? numOrNull(ultimo.temp_c) : null,
-    ultimo ? numOrNull(ultimo.hum_pct) : null
-);
 
-
-const heatEl = document.getElementById("tarjetaHeatIndex");
-
-if(heat === null){
-
-    heatEl.innerHTML =
-    `—<span class="unidad">°C</span>`;
-
-}
-else{
-
-    heatEl.innerHTML =
-    `${heat.toFixed(1)}<span class="unidad">°C</span>`;
-
-}
+    el.innerHTML = 
+      num === null 
+      ? `—<span class="unidad">${unidad}</span>`
+      : `${num.toFixed(dec)}<span class="unidad">${unidad}</span>`;
   };
+
+
+  // Tarjetas normales
   set('tarjetaTempAmbiente', 'temp_c', 1);
   set('tarjetaTempBmp', 'temp_bmp_c', 1);
   set('tarjetaPresion', 'presion_hpa', 1);
   set('tarjetaHumedad', 'hum_pct', 0);
 
-  // Radiación solar aproximada: las estaciones profesionales reportan W/m²
-  // (irradiancia, con piranómetro), no lux (unidad fotométrica del VEML7700).
-  // Conversión estándar usada por estaciones tipo Davis para luz solar: lux / 126.7 ≈ W/m²
-  const lux = ultimo ? numOrNull(ultimo.lux) : null;
-  const radiacion = lux === null ? null : lux / 126.7;
-  const elRad = document.getElementById('tarjetaRadiacion');
-  elRad.innerHTML = radiacion === null ? '—<span class="unidad">W/m²</span>' : `${radiacion.toFixed(1)}<span class="unidad">W/m²</span>`;
-}
 
+  // ================================
+  // CÁLCULO DE SENSACIÓN TÉRMICA
+  // ================================
+
+  const temperatura = ultimo ? numOrNull(ultimo.temp_c) : null;
+  const humedad = ultimo ? numOrNull(ultimo.hum_pct) : null;
+
+  const heat = calcularHeatIndex(
+      temperatura,
+      humedad
+  );
+
+
+  const heatEl = document.getElementById("tarjetaHeatIndex");
+
+
+  if(heat === null){
+
+      heatEl.innerHTML =
+      `—<span class="unidad">°C</span>`;
+
+  }else{
+
+      heatEl.innerHTML =
+      `${heat.toFixed(1)}<span class="unidad">°C</span>`;
+
+  }
+
+
+
+  // ================================
+  // LUX → W/m² aproximado
+  // ================================
+
+  const lux = ultimo ? numOrNull(ultimo.lux) : null;
+
+  const radiacion = lux === null ? null : lux / 126.7;
+
+  const elRad = document.getElementById('tarjetaRadiacion');
+
+  elRad.innerHTML =
+    radiacion === null
+    ? '—<span class="unidad">W/m²</span>'
+    : `${radiacion.toFixed(1)}<span class="unidad">W/m²</span>`;
+
+}
 // ======================================================
 // ============== PANEL GPS ==================================
 // ======================================================
